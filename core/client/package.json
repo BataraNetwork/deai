@@ -1,0 +1,28 @@
+{
+  "name": "client",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "proto:gen": "grpc_tools_node_protoc --proto_path=./src/grpc --js_out=import_style=commonjs,binary:./src/grpc --grpc_out=grpc_js:./src/grpc --plugin=protoc-gen-ts=./node_modules/.bin/protoc-gen-ts --ts_out=service=grpc-node:./src/grpc ./src/grpc/node.proto",
+    "build": "tsc"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@grpc/grpc-js": "^1.10.10",
+    "@grpc/proto-loader": "^0.7.13",
+    "commander": "^12.1.0",
+    "ethers": "^6.13.1",
+    "yargs": "^17.7.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.9",
+    "@types/yargs": "^17.0.32",
+    "grpc-tools": "^1.12.4",
+    "ts-protoc-gen": "^0.15.0",
+    "typescript": "^5.5.2"
+  }
+}

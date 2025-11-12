@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package node;
+
+service Node {
+  rpc SubmitTransaction (TransactionMessage) returns (SubmitTransactionResponse) {}
+}
+
+message TransactionMessage {
+  string to = 1;
+  double amount = 2;
+  int64 timestamp = 3;
+  string publickey = 4;
+  string signature = 5;
+}
+
+message SubmitTransactionResponse {
+  string message = 1;
+  string transaction_id = 2;
+}

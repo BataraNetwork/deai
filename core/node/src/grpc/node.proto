@@ -1,0 +1,141 @@
+
+syntax = "proto3";
+
+package node;
+
+message ValidatorMessage {
+  string publicKey = 1;
+  int64 stake = 2;
+}
+
+message TransactionMessage {
+    // The sender's public key. The 'from' address is derived from this.
+    string publicKey = 1;
+    // The recipient's address.
+    string to = 2;
+    // The amount to transfer.
+    int64 amount = 3;
+    // A unique timestamp for the transaction, used to prevent replay attacks.
+    int64 timestamp = 4;
+    // The cryptographic signature of the transaction data.
+    string signature = 5;
+}
+
+message BlockMessage {
+    int64 height = 1;
+    int64 timestamp = 2;
+    string validator = 3;
+    string parentHash = 4;
+    string hash = 5;
+    repeated TransactionMessage transactions = 6;
+}
+
+// The Node service definition.
+service Node {
+  // ... (other RPCs are unchanged)
+  rpc GetStatus (StatusRequest) returns (StatusReply) {}
+  rpc ListValidators (ListValidatorsRequest) returns (ListValidatorsResponse) {}
+  rpc AddValidator (AddValidatorRequest) returns (AddValidatorResponse) {}
+  rpc RemoveValidator (RemoveValidatorRequest) returns (RemoveValidatorResponse) {}
+  rpc AnnouncePeer(AnnouncePeerRequest) returns (AnnouncePeerResponse) {}
+  rpc SyncValidatorUpdate(SyncValidatorUpdateRequest) returns (SyncValidatorUpdateResponse) {}
+  rpc GossipPeers(GossipPeersRequest) returns (GossipPeersResponse) {}
+  rpc AnnounceBlock(AnnounceBlockRequest) returns (AnnounceBlockResponse) {}
+  rpc GetChain(GetChainRequest) returns (GetChainResponse) {}
+
+  // Submit a new, signed transaction to the network.
+  rpc SubmitTransaction(TransactionMessage) returns (SubmitTransactionResponse) {}
+
+  // Announce a new transaction to a peer.
+  rpc AnnounceTransaction(TransactionMessage) returns (AnnounceTransactionResponse) {}
+}
+
+// Status
+message StatusRequest {}
+message StatusReply {
+  string status = 1;
+  int64 timestamp = 2;
+}
+
+// ListValidators
+message ListValidatorsRequest {}
+message ListValidatorsResponse {
+  repeated ValidatorMessage validators = 1;
+}
+
+// AddValidator
+message AddValidatorRequest {
+  string publicKey = 1;
+  int64 stake = 2;
+}
+message AddValidatorResponse {
+    string message = 1;
+}
+
+// RemoveValidator
+message RemoveValidatorRequest {
+    string publicKey = 1;
+}
+message RemoveValidatorResponse {
+    string message = 1;
+}
+
+// AnnouncePeer
+message AnnouncePeerRequest {
+    string address = 1;
+}
+message AnnouncePeerResponse {
+    string message = 1;
+    repeated string current_peers = 2;
+}
+
+// SyncValidatorUpdate
+message SyncValidatorUpdateRequest {
+    enum UpdateType {
+        ADD = 0;
+        REMOVE = 1;
+    }
+    UpdateType update_type = 2;
+    string publicKey = 3;
+    int64 stake = 4;
+}
+
+message SyncValidatorUpdateResponse {
+    string message = 1;
+}
+
+// GossipPeers
+message GossipPeersRequest {
+    string from_address = 1;
+    repeated string peers = 2;
+}
+message GossipPeersResponse {
+    string message = 1;
+    repeated string known_peers = 2;
+}
+
+// AnnounceBlock
+message AnnounceBlockRequest {
+    BlockMessage block = 1;
+    string from_peer = 2;
+}
+message AnnounceBlockResponse {
+    string message = 1;
+}
+
+// GetChain
+message GetChainRequest {}
+message GetChainResponse {
+    repeated BlockMessage blocks = 1;
+}
+
+// SubmitTransaction
+message SubmitTransactionResponse {
+    string transaction_id = 1;
+    string message = 2;
+}
+
+// AnnounceTransaction
+message AnnounceTransactionResponse {
+    string message = 1;
+}

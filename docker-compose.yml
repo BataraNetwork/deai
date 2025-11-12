@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  # AI Node Engine Service
+  node-engine:
+    build:
+      context: ./services/node-engine
+    ports:
+      - "8080:8080"
+    environment:
+      # The API key required by the service
+      - API_KEY=default-secret-key
+      # Redis URL for Celery task queue
+      - REDIS_URL=redis://redis:6379/0
+    # The command to start the service inside the container
+    command: gunicorn --bind 0.0.0.0:8080 --workers 1 --threads 8 --timeout 0 app:app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+
+  # Gateway Service
+  gateway:
+    build:
+      context: ./services/gateway
+    ports:
+      - "3000:3000"
+    environment:
+      - DEAI_TOKEN_CONTRACT_ADDRESS=0x
+      - RPC_URL=
+      - PRIVATE_KEY=0x
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis Service for Celery
+  redis:
+    image: "redis:alpine"
+    ports:
+      - "6379:6379"

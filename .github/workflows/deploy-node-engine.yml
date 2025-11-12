@@ -1,0 +1,61 @@
+name: Deploy AI Node Engine to Cloud Run
+
+on:
+  push:
+    branches:
+      - main # Or your default branch
+    paths:
+      - 'node-engine/**' # Only run when code in node-engine changes
+
+jobs:
+  deploy:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+    environment: production
+
+    permissions:
+      contents: 'read'
+      id-token: 'write' # Required for authentication
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Authenticate to Google Cloud
+        uses: 'google-github-actions/auth@v2'
+        with:
+          workload_identity_provider: '${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}'
+          service_account: '${{ secrets.GCP_SERVICE_ACCOUNT }}'
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev # Change region if needed
+
+      - name: Build and Push Docker Image
+        env:
+          PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          REGION: us-central1 # Change region if needed
+          REPO_NAME: ai-app-repo
+        run: |
+          IMAGE_URL="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/node-engine:latest"
+          docker build -t ${IMAGE_URL} ./node-engine
+          docker push ${IMAGE_URL}
+
+      - name: Deploy to Cloud Run
+        env:
+          PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          REGION: us-central1 # Change region if needed
+          REDIS_URL: ${{ secrets.REDIS_URL }} # Add your Redis URL as a secret
+        run: |
+          IMAGE_URL="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/node-engine:latest"
+          gcloud run deploy node-engine \
+            --image=${IMAGE_URL} \
+            --platform=managed \
+            --region=${REGION} \
+            --allow-unauthenticated \
+            --memory=16Gi \
+            --cpu=2 \
+            --timeout=900 \
+            --set-env-vars="API_KEY=default-secret-key,REDIS_URL=${REDIS_URL}"

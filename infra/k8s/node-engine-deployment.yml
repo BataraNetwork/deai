@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node-engine
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: node-engine
+  template:
+    metadata:
+      labels:
+        app: node-engine
+    spec:
+      containers:
+      - name: node-engine
+        image: <your-docker-registry>/node-engine:latest
+        ports:
+        - containerPort: 5001

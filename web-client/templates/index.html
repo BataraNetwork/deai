@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Web Client</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 2rem; background-color: #f4f6f8; color: #1a1a1a; display: flex; justify-content: center; }
+        .container { width: 100%; max-width: 600px; }
+        h1 { text-align: center; color: #333; }
+        #chat-window { background-color: #fff; border: 1px solid #e1e4e8; border-radius: 6px; padding: 1rem; min-height: 200px; margin-bottom: 1.5rem; overflow-y: auto; max-height: 400px; }
+        .message { margin-bottom: 1rem; padding: 0.75rem 1rem; border-radius: 8px; line-height: 1.6; }
+        .message.user { background-color: #007bff; color: white; text-align: right; }
+        .message.ai { background-color: #e9ecef; color: #333; }
+        #prompt-form { display: flex; flex-direction: column; }
+        .form-row { display: flex; margin-bottom: 1rem; }
+        #prompt-input { flex-grow: 1; padding: 0.8rem; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem; }
+        #model-select { padding: 0.8rem; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem; margin-bottom: 1rem; }
+        .param-slider { display: flex; flex-direction: column; margin-bottom: 1rem; }
+        .param-slider label { margin-bottom: 0.5rem; color: #555; }
+        .param-slider input[type="range"] { width: 100%; }
+        #submit-button { width: 100%; padding: 0.8rem 1.2rem; border: 1px solid #007bff; background-color: #007bff; color: white; border-radius: 4px; cursor: pointer; font-size: 1rem; }
+        #submit-button:disabled { background-color: #aaa; border-color: #aaa; cursor: not-allowed; }
+        #clear-chat-button { width: 100%; padding: 0.8rem 1.2rem; border: 1px solid #dc3545; background-color: #dc3545; color: white; border-radius: 4px; cursor: pointer; font-size: 1rem; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Conversational AI</h1>
+        <div id="chat-window">
+            {% for msg in messages %}
+                <div class="message {{ msg.sender }}">{{ msg.content }}</div>
+            {% endfor %}
+        </div>
+        <form id="prompt-form">
+            <select id="model-select">
+                {% for model in models %}
+                <option value="{{ model }}">{{ model|capitalize }}</option>
+                {% endfor %}
+            </select>
+
+            <div class="param-slider">
+                <label for="temperature">Temperature: <span id="temperature-value">0.7</span></label>
+                <input type="range" id="temperature" name="temperature" min="0.1" max="1.0" step="0.1" value="0.7">
+            </div>
+
+            <div class="param-slider">
+                <label for="max_new_tokens">Max New Tokens: <span id="max-tokens-value">150</span></label>
+                <input type="range" id="max_new_tokens" name="max_new_tokens" min="50" max="300" step="10" value="150">
+            </div>
+
+            <div class="form-row">
+                <input type="text" id="prompt-input" placeholder="Enter your prompt..." autocomplete="off">
+            </div>
+            <button type="submit" id="submit-button">Send</button>
+        </form>
+        <button id="clear-chat-button">Clear Chat</button>
+    </div>
+
+    <script>
+        const form = document.getElementById('prompt-form');
+        const input = document.getElementById('prompt-input');
+        const chatWindow = document.getElementById('chat-window');
+        const modelSelect = document.getElementById('model-select');
+        const temperatureSlider = document.getElementById('temperature');
+        const maxTokensSlider = document.getElementById('max_new_tokens');
+        const temperatureValue = document.getElementById('temperature-value');
+        const maxTokensValue = document.getElementById('max-tokens-value');
+        const submitButton = document.getElementById('submit-button');
+        const clearChatButton = document.getElementById('clear-chat-button');
+
+        temperatureSlider.oninput = () => temperatureValue.textContent = temperatureSlider.value;
+        maxTokensSlider.oninput = () => maxTokensValue.textContent = maxTokensSlider.value;
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            if (!input.value.trim()) return;
+
+            const userMessage = input.value;
+            addMessageToUI(userMessage, 'user');
+            input.value = '';
+
+            const formData = new FormData();
+            formData.append('prompt', userMessage);
+            formData.append('model', modelSelect.value);
+            formData.append('temperature', temperatureSlider.value);
+            formData.append('max_new_tokens', maxTokensSlider.value);
+
+            submitButton.disabled = true;
+            submitButton.textContent = 'Generating...';
+            
+            let aiFullResponse = '';
+            const aiMessageDiv = addMessageToUI('', 'ai');
+
+            fetch('/generate-stream', {
+                method: 'POST',
+                body: new URLSearchParams(formData)
+            })
+            .then(response => {
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                function read() {
+                    reader.read().then(({ done, value }) => {
+                        if (done) {
+                            submitButton.disabled = false;
+                            submitButton.textContent = 'Send';
+                            saveAIMessage(aiFullResponse); // Save the complete AI response
+                            return;
+                        }
+                        const chunk = decoder.decode(value, { stream: true });
+                        const lines = chunk.split('\n');
+                        for(const line of lines) {
+                            if (line.startsWith('data:')) {
+                                const token = line.substring(5).trim();
+                                aiFullResponse += token;
+                                aiMessageDiv.textContent += token;
+                            }
+                        }
+                        chatWindow.scrollTop = chatWindow.scrollHeight; // Auto-scroll
+                        read();
+                    });
+                }
+                read();
+            })
+            .catch(err => {
+                console.error("Request failed:", err);
+                aiMessageDiv.textContent = "Error receiving response from server.";
+                submitButton.disabled = false;
+                submitButton.textContent = 'Send';
+            });
+        });
+
+        clearChatButton.addEventListener('click', function() {
+            fetch('/clear-chat', {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.success) {
+                    chatWindow.innerHTML = '';
+                } else {
+                    console.error('Error clearing chat:', data.error);
+                }
+            })
+            .catch(err => {
+                console.error('Error clearing chat:', err);
+            });
+        });
+
+        function addMessageToUI(content, sender) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', sender);
+            messageDiv.textContent = content;
+            chatWindow.appendChild(messageDiv);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+            return messageDiv; 
+        }
+
+        function saveAIMessage(content) {
+            fetch('/save-message', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ sender: 'ai', content: content })
+            });
+        }
+    </script>
+</body>
+</html>

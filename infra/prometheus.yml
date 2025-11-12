@@ -1,0 +1,11 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'node-engine'
+    static_configs:
+      - targets: ['node-engine:5001']
+
+  - job_name: 'gateway'
+    static_configs:
+      - targets: ['gateway:3000']
