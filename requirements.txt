@@ -6,3 +6,14 @@ grpcio
 protobuf
 grpcio-tools
 grpcio-health-checking
+httpx
+stripe
+typer
+rich
+web3
+celery
+redis
+transformers
+torch
+accelerate
+bitsandbytes

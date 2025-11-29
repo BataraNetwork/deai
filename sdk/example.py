@@ -1,87 +1,86 @@
-# To run this example, ensure the DeAI services are running (e.g., via `docker-compose up --build`)
-# Then, from the root of the project, run:
-# PYTHONPATH=sdk python3 sdk/example.py
-
-import requests
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+import os
+from dotenv import load_dotenv
 from deai_sdk.client import DeAIClient
-from deai_sdk.models import TaskStatus
 
-# This is a test address. In a real application, this would be the user's actual wallet address.
-# This specific address is known to have a balance in the local test environment.
-TEST_USER_ADDRESS = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+# --- Environment Setup ---
+# Load environment variables from .env file
+# Ensure you have DEAI_PRIVATE_KEY, RPC_URL, and DEAI_TOKEN_CONTRACT_ADDRESS set.
+load_dotenv()
 
+# --- Example Usage ---
 def main():
-    """Demonstrates how to use the DeAIClient to interact with the gateway."""
-    print("Initializing DeAI Client...")
-    try:
-        client = DeAIClient(api_base_url="http://localhost:8080")
-    except ConnectionError as e:
-        print(f"Error: {e}")
-        print("Please ensure the DeAI gateway service is running.")
-        return
+    """Demonstrates the full lifecycle of using the DeAIClient."""
+    private_key = os.getenv("DEAI_PRIVATE_KEY")
+    if not private_key:
+        raise ValueError("DEAI_PRIVATE_KEY must be set in the environment.")
 
-    print("\n--- 1. Fetching Available Models ---")
+    # --- Initialization with Failover ---
+    # Provide a list of potential gateway nodes.
+    # The client will automatically find and connect to a healthy one.
+    # You can also set this as a comma-separated string in the DEAI_API_URLS environment variable.
+    gateway_nodes = [
+        "http://localhost:8000", # Your local node
+        "http://localhost:8001", # A potential second local node for testing
+        "https://deai-node.some-production-url.com" # A hypothetical production node
+    ]
+
     try:
+        print("Initializing DeAIClient with failover support...")
+        client = DeAIClient(
+            private_key=private_key,
+            api_base_urls=gateway_nodes
+        )
+
+        # --- 1. Check Balance ---
+        balance = client.get_balance()
+        print(f"\nWallet Balance: {balance} DeAI tokens")
+
+        # --- 2. List Available Models ---
+        print("\nFetching available models...")
         models = client.get_models()
         if not models:
             print("No models available from the gateway.")
-        else:
-            print("Available models:")
-            for model in models:
-                print(f"- {model.name}")
-    except Exception as e:
-        print(f"Error fetching models: {e}")
-        return
+            return
+        
+        print("Available Models:")
+        for m in models:
+            print(f"- ID: {m.id}, Cost: {m.cost} DeAI/token")
+        
+        # Select a model to use
+        # For this example, we'll use the first available model
+        target_model = models[0]
 
-    if not models:
-        print("\nCannot proceed without any available models.")
-        return
-    
-    selected_model = models[0].name
-    print(f"\n--- 2. Submitting Inference Job for model: '{selected_model}' ---")
-    print(f"Using wallet address for token check: {TEST_USER_ADDRESS}")
-
-    prompt = "Write a short, futuristic story about a cat that can talk."
-    print(f"Prompt: {prompt}")
-
-    task = None # Initialize task to None
-    try:
-        # The gateway now requires a user's address to check their token balance.
-        task = client.submit_job(
-            address=TEST_USER_ADDRESS,
-            model=selected_model,
-            prompt=prompt
+        # --- 3. Submit a Generation Job ---
+        print(f"\nSubmitting a job to model: {target_model.id}...")
+        # The client will automatically handle token approval if needed
+        task = client.generate(
+            model_id=target_model.id,
+            prompt="Explain the significance of the Decentralized Physical Infrastructure Network (DePIN) in 50 words.",
         )
-        print(f"Successfully submitted job. Task ID: {task.task_id}")
-    except requests.exceptions.HTTPError as e:
-        if e.response.status_code == 402:
-            print("\nJob submission failed: 402 Payment Required. The user has insufficient token balance.")
-            print("This confirms the gateway's token-based access control is working correctly.")
-        else:
-            print(f"\nAn unexpected HTTP error occurred: {e}")
+        print(f"Job submitted successfully! Task ID: {task.task_id}")
+
+        # --- 4. Poll for Result ---
+        print("\nWaiting for job to complete...")
+        try:
+            result = client.get_job_result(task_id=task.task_id)
+            print("\n--- Job Result ---")
+            if result.status == "SUCCESS":
+                print(f"Status: {result.status}")
+                print(f"Result: {result.result}")
+                print(f"Cost: {result.cost}")
+            else:
+                print(f"Status: {result.status}")
+                print(f"Error: {result.error}")
+
+        except TimeoutError as e:
+            print(f"\nError: {e}")
+
+    except ConnectionError as e:
+        print(f"\nInitialization Failed: {e}")
     except Exception as e:
-        print(f"\nError submitting job: {e}")
-
-    if not task:
-        print("\nSkipping result check as job submission did not return a task.")
-        return
-
-    print("\n--- 3. Waiting for Job Completion ---")
-    try:
-        final_status: TaskStatus = client.get_job_result(task.task_id)
-        print(f"Job finished with status: {final_status.status}")
-
-        if final_status.status == "SUCCESS":
-            print("\n--- 4. Displaying Result ---")
-            print(f"Generated Text: {final_status.result}")
-        elif final_status.status == "FAILURE":
-            print("\n--- 4. Job Failed ---")
-            print(f"Reason: {final_status.result}")
-
-    except TimeoutError as e:
-        print(f"\nError: {e}")
-    except Exception as e:
-        print(f"\nAn unexpected error occurred while waiting for the result: {e}")
+        print(f"\nAn unexpected error occurred: {e}")
 
 if __name__ == "__main__":
     main()

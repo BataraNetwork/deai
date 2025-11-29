@@ -52,7 +52,7 @@ Verifikasi hardware & software environment node (SGX attestation).
 - [ ] Compute Mining Pool: Reward dihitung berdasar GPU uptime dan workload.
 - [ ] Dynamic Reward Adjustment: Smart contract menyesuaikan reward otomatis tergantung supply-demand.
 - [ ] Buyback & Burn: Bagian dari revenue digunakan untuk menjaga nilai token.
-- [ ] Fiat Payment Gateway: Integrasi Stripe / Circle / Coinbase Commerce untuk user non-crypto.
+- [x] Fiat Payment Gateway: Integrasi Stripe / Circle / Coinbase Commerce untuk user non-crypto.
 
 ## Model Marketplace
 
@@ -63,10 +63,10 @@ Verifikasi hardware & software environment node (SGX attestation).
 
 ## Ecosystem & Integrations
 
-- [ ] CLI SDK: deai-cli untuk deploy node, daftar model, dan tes inference.
+- [x] CLI SDK: deai-cli untuk deploy node, daftar model, dan tes inference.
 - [ ] GraphQL API: Akses cepat ke data jaringan, node, dan model.
 - [ ] Monitoring Dashboard: Real-time metrics + alert system (Grafana / Prometheus).
-- [ ] Plugin Marketplace: Integrasi plugin AI tambahan (Stable Diffusion, Whisper, CodeLlama, dsb).
+- [x] Plugin Marketplace: Integrasi plugin AI tambahan (Stable Diffusion, Whisper, CodeLlama, dsb).
 
 ## B2B & Enterprise
 

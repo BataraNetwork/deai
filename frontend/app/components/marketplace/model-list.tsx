@@ -1,3 +1,5 @@
+'use client';
+
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
@@ -13,12 +15,11 @@ export default function ModelList() {
   const [models, setModels] = useState<Model[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     async function fetchModels() {
       try {
-        // I'm assuming an API endpoint on the gateway service.
-        // This might need to be adjusted based on the actual API.
         const response = await fetch('/api/gateway/models');
         if (!response.ok) {
           throw new Error('Failed to fetch models');
@@ -35,32 +36,50 @@ export default function ModelList() {
     fetchModels();
   }, []);
 
+  const filteredModels = models.filter(model =>
+    model.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    model.description.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   if (loading) {
-    return <div>Loading models...</div>;
+    return <div className="text-center p-8">Loading models...</div>;
   }
 
   if (error) {
-    return <div>Error: {error}</div>;
+    return <div className="text-center p-8 text-red-500">Error: {error}</div>;
   }
 
   return (
     <div>
-      <h2 className="text-xl font-bold mb-2">Available Models</h2>
-      {models.length === 0 ? (
-        <p>No models available.</p>
+      <div className="mb-6">
+        <input
+          type="text"
+          placeholder="Search models by name or description..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      {filteredModels.length === 0 ? (
+        <p className="text-center text-gray-500">No models match your search.</p>
       ) : (
-        <ul className="space-y-4">
-          {models.map((model) => (
-            <li key={model.id} className="border rounded-lg p-4">
-              <h3 className="font-semibold text-lg">{model.name}</h3>
-              <p className="text-sm text-gray-600 mt-1">{model.description}</p>
-              <p className="text-xs text-gray-400 mt-2">Owner: {model.owner}</p>
-              <Link href={`/marketplace/${model.id}`} className="text-blue-500 hover:underline mt-2 inline-block">
-                View Details
-              </Link>
-            </li>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredModels.map((model) => (
+            <div key={model.id} className="bg-white border rounded-lg p-6 shadow-sm hover:shadow-lg transition-shadow duration-200 flex flex-col">
+              <div className="flex-grow">
+                <h3 className="font-bold text-xl mb-2">{model.name}</h3>
+                <p className="text-sm text-gray-600 mb-4">{model.description}</p>
+              </div>
+              <div className="mt-auto">
+                 <p className="text-xs text-gray-500 mb-3">Owner: {model.owner}</p>
+                 <Link href={`/marketplace/${model.id}`} className="text-blue-500 hover:underline font-semibold">
+                   View Details
+                 </Link>
+              </div>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );
