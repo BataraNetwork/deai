@@ -1,17 +1,8 @@
-# Dev environment
-pip
-autopep8
-requests
-
-# App
-flask
-gunicorn
-
-# AI & Machine Learning
-transformers # Core library for using models from Hugging Face
-torch        # Deep learning framework
-accelerate   # Helps to run models on available hardware
-
-# Task Queue for Background Inference
-celery       # Distributed task queue
-redis        # In-memory data store, used as a Celery message broker
+fastapi
+uvicorn[standard]
+python-dotenv
+websockets
+grpcio
+protobuf
+grpcio-tools
+grpcio-health-checking

@@ -18,7 +18,8 @@
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "viem": "^2.38.6",
-    "ws": "^8.18.3"
+    "ws": "^8.18.3",
+    "axios": "^1.7.2"
   },
   "devDependencies": {
     "@types/express": "^5.0.5",

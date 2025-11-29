@@ -1,25 +1,38 @@
-version: '3.8'
+lversion: '3.8'
 
 services:
-  # AI Node Engine Service
+  # AI Node Engine Service (FastAPI)
   node-engine:
     build:
       context: ./services/node-engine
     ports:
       - "8080:8080"
     environment:
-      # The API key required by the service
-      - API_KEY=default-secret-key
-      # Redis URL for Celery task queue
       - REDIS_URL=redis://redis:6379/0
-    # The command to start the service inside the container
-    command: gunicorn --bind 0.0.0.0:8080 --workers 1 --threads 8 --timeout 0 app:app
+      # Set PYTHONPATH to ensure modules are found correctly
+      - PYTHONPATH=.
+    # Command to start the FastAPI server with Uvicorn
+    command: uvicorn services.node-engine.app:app --host 0.0.0.0 --port 8080 --reload
+    depends_on:
+      - redis
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
       timeout: 10s
       retries: 3
 
+  # Celery Worker for the Node Engine
+  celery-worker:
+    build:
+      context: ./services/node-engine
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - PYTHONPATH=.
+    # Command to start the Celery worker
+    command: celery -A services.node-engine.celery_app worker -l info
+    depends_on:
+      - redis
+      - node-engine
 
   # Gateway Service
   gateway:
